@@ -16,19 +16,31 @@ export class GeminiService {
       import.meta.env.GEMINI_API_KEY ||
       (typeof process !== 'undefined' ? (process.env.VITE_GEMINI_API_KEYS || process.env.GEMINI_API_KEY) : null);
 
-    // Capacitor/Bundled fallback: check if injected via window or process.env directly
-    if (!rawKeys && typeof window !== 'undefined') {
-      rawKeys = (window as any).VITE_GEMINI_API_KEYS || (window as any).GEMINI_API_KEY;
+    // Capacitor/Bundled fallback: check multiple sources
+    if (!rawKeys) {
+      if (typeof window !== 'undefined') {
+        rawKeys = (window as any).VITE_GEMINI_API_KEYS || (window as any).GEMINI_API_KEY || (window as any).process?.env?.VITE_GEMINI_API_KEYS;
+      }
     }
 
     if (!rawKeys) {
-      console.warn("Gemini API Keys not found. Checking for single GEMINI_API_KEY...");
-      // Try one last fallback
-      rawKeys = import.meta.env.VITE_GEMINI_KEY || (typeof process !== 'undefined' ? process.env.VITE_GEMINI_KEY : null);
+      // Check for specifically named VITE_GEMINI_KEY as well
+      rawKeys = import.meta.env.VITE_GEMINI_KEY || 
+                (typeof process !== 'undefined' ? process.env.VITE_GEMINI_KEY : null) ||
+                (typeof window !== 'undefined' ? (window as any).VITE_GEMINI_KEY : null);
     }
 
     if (!rawKeys) {
-      throw new Error("Gemini API Keys not found. Please ensure VITE_GEMINI_API_KEYS is set in your environment.");
+      // Final attempt: check if defined as a global by Vite via 'define'
+      try {
+        // @ts-ignore
+        rawKeys = VITE_GEMINI_API_KEYS;
+      } catch (e) {}
+    }
+
+    if (!rawKeys) {
+      console.error("CRITICAL: Gemini API Keys not found in any source (env, window, global).");
+      throw new Error("Gemini API Keys not found. Please ensure VITE_GEMINI_API_KEYS is set.");
     }
     
     this.apiKeys = rawKeys.split(',')

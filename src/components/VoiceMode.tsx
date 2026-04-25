@@ -186,23 +186,21 @@ export const VoiceMode = React.memo(({ onClose, uiLanguage, contentLanguage }: P
       try {
         console.log("VoiceMode: Requesting microphone permission...");
         
-        // Attempt Capacitor permission request if on native
-        if (typeof window !== 'undefined' && (window as any).Capacitor) {
-          try {
-            console.log("VoiceMode: Capacitor detected, logging system info...");
-          } catch (e) {
-            console.warn("Permission check failed, proceeding with web API");
-          }
-        }
-
         let stream: MediaStream;
         try {
+          // Standard web API check
           stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         } catch (micErr: any) {
           console.error("Microphone access denied or error:", micErr);
-          if (mountedRef.current) setStatus(t.micError);
-          // Suggest clearing cache or checking system settings
-          alert(t.micError + "\n\nTip: Check if MnemoniX has microphone permissions in Android Settings.");
+          
+          // Check if permission was denied
+          const permStatus = await navigator.permissions.query({ name: 'microphone' as any }).catch(() => null);
+          console.log("Current Mic Permission Status:", permStatus?.state);
+
+          if (mountedRef.current) {
+            setStatus(t.micError);
+            alert(t.micError + "\n\nStatus: " + (permStatus?.state || "Unknown") + "\n\nTip: Grant Permission in Android Settings > Apps > MnemoniX");
+          }
           return;
         }
 

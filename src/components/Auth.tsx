@@ -74,11 +74,12 @@ export const Auth: React.FC<AuthProps> = ({ onClose, onSuccess, t }) => {
 
   const handleOAuth = async (provider: 'google' | 'github') => {
     try {
-      const isNative = Capacitor.isNativePlatform();
+      const isNative = Capacitor.isNativePlatform() || window.location.protocol === 'file:';
       const redirectTo = isNative 
         ? 'com.mnemonix.app://callback' 
         : `${window.location.origin}/callback.html`;
 
+      console.log(`Auth: Native detected via protocol: ${window.location.protocol}`);
       console.log(`Auth: Initiating OAuth for ${provider}. Native: ${isNative}, Redirect: ${redirectTo}`);
 
       const { error } = await supabase.auth.signInWithOAuth({

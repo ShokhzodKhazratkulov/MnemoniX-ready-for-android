@@ -103,20 +103,8 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
       let query = supabase
         .from('posts')
         .select(`
-          id,
-          created_at,
-          user_id,
-          language,
-          parent_post_id,
-          word,
-          keyword,
-          story,
-          image_url,
-          likes_count,
-          dislikes_count,
-          impression_emojis,
-          is_updated,
-          profiles!user_id (username, full_name, avatar_url),
+          *,
+          profiles:user_id (username, full_name, avatar_url),
           parent:parent_post_id (
             user_id,
             profiles:user_id (username, full_name, avatar_url)
@@ -137,8 +125,11 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data: postsData, error: postsError } = await query;
 
       if (postsError) {
-        console.error('Detailed Supabase Fetch Error:', postsError);
-        throw postsError;
+        console.error('Supabase Query Error:', postsError);
+        // Instead of throwing, we'll just log and continue with empty array to avoid crashing the view
+        setPosts(prev => reset ? [] : prev);
+        setHasMore(false);
+        return;
       }
 
       // Fetch current user's reactions for these posts if logged in
@@ -276,20 +267,8 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
           ]
         })
         .select(`
-          id,
-          created_at,
-          user_id,
-          language,
-          parent_post_id,
-          word,
-          keyword,
-          story,
-          image_url,
-          likes_count,
-          dislikes_count,
-          impression_emojis,
-          is_updated,
-          profiles!user_id (username, full_name, avatar_url),
+          *,
+          profiles:user_id (username, full_name, avatar_url),
           parent:parent_post_id (
             user_id,
             profiles:user_id (username, full_name, avatar_url)
@@ -298,7 +277,8 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (pError) {
-        console.error('Detailed Supabase Insert Error:', pError);
+        console.error('Supabase Insert Error:', pError);
+        alert(`Postni saqlab bo'lmadi: ${pError.message}`);
         throw pError;
       }
 
