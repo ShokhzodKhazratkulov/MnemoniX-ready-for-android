@@ -39,8 +39,8 @@ export class GeminiService {
     }
 
     if (!rawKeys) {
-      console.error("CRITICAL: Gemini API Keys not found in any source (env, window, global).");
-      throw new Error("Gemini API Keys not found. Please ensure VITE_GEMINI_API_KEYS is set.");
+      console.error("CRITICAL: Gemini API Keys not found in any source (env, window, global). API Initialization will fail.");
+      return; // Return instead of throw to avoid crashing the whole service init if we want to handle it gracefully in components
     }
     
     this.apiKeys = rawKeys.split(',')

@@ -74,21 +74,21 @@ export const Auth: React.FC<AuthProps> = ({ onClose, onSuccess, t }) => {
 
   const handleOAuth = async (provider: 'google' | 'github') => {
     try {
-      const isNative = Capacitor.isNativePlatform() || window.location.protocol === 'file:';
-      const redirectTo = isNative 
-        ? 'com.mnemonix.app://callback' 
-        : `${window.location.origin}/callback.html`;
+    const isNative = Capacitor.isNativePlatform() || window.location.protocol === 'file:';
+    const redirectTo = isNative 
+      ? 'com.mnemonix.app://callback' 
+      : window.location.origin;
+    
+    console.log(`Auth: Redirect URL resolved to: ${redirectTo}. Protocol: ${window.location.protocol}`);
 
-      console.log(`Auth: Native detected via protocol: ${window.location.protocol}`);
-      console.log(`Auth: Initiating OAuth for ${provider}. Native: ${isNative}, Redirect: ${redirectTo}`);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo
+      }
+    });
 
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo
-        }
-      });
-      if (error) throw error;
+    if (error) throw error;
     } catch (err: any) {
       console.error('OAuth Error:', err);
       setError(err.message);

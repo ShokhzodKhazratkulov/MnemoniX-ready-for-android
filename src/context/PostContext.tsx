@@ -104,11 +104,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('posts')
         .select(`
           *,
-          profiles:user_id (username, full_name, avatar_url),
-          parent:parent_post_id (
-            user_id,
-            profiles:user_id (username, full_name, avatar_url)
-          )
+          profiles:user_id (username, full_name, avatar_url)
         `)
         .eq('language', language);
 
@@ -268,11 +264,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
         })
         .select(`
           *,
-          profiles:user_id (username, full_name, avatar_url),
-          parent:parent_post_id (
-            user_id,
-            profiles:user_id (username, full_name, avatar_url)
-          )
+          profiles:user_id (username, full_name, avatar_url)
         `)
         .single();
 
