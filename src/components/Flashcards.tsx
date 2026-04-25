@@ -382,14 +382,6 @@ export const Flashcards = React.memo(({
       return (
         <div className="max-w-4xl mx-auto animate-fadeIn mt-4 px-2 sm:px-4 pb-24">
           <div className="bg-white dark:bg-slate-950 rounded-[2.5rem] p-4 sm:p-12 shadow-2xl border border-gray-100 dark:border-slate-900 relative">
-            {/* Back Button */}
-            <button 
-              onClick={() => setSelectedWord(null)}
-              className="absolute top-6 left-6 sm:top-8 sm:left-8 w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center bg-gray-50 dark:bg-primary border border-gray-100 dark:border-white/10 rounded-2xl text-gray-500 dark:text-gray-400 hover:text-accent dark:hover:text-accent transition-all shadow-sm z-10"
-            >
-              <ChevronLeft size={24} />
-            </button>
-            
             <div className="pt-12 sm:pt-0">
               <MnemonicCard 
                 data={selectedWord.data} 

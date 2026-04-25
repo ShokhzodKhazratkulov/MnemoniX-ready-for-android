@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Mail, Lock, Loader2, Github, Chrome, ArrowLeft } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import { Capacitor } from '@capacitor/core';
 
 interface AuthProps {
   onClose?: () => void;
@@ -73,10 +74,12 @@ export const Auth: React.FC<AuthProps> = ({ onClose, onSuccess, t }) => {
 
   const handleOAuth = async (provider: 'google' | 'github') => {
     try {
-      const isNative = typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform();
+      const isNative = Capacitor.isNativePlatform();
       const redirectTo = isNative 
         ? 'com.mnemonix.app://callback' 
-        : window.location.origin;
+        : `${window.location.origin}/callback.html`;
+
+      console.log(`Auth: Initiating OAuth for ${provider}. Native: ${isNative}, Redirect: ${redirectTo}`);
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
@@ -86,6 +89,7 @@ export const Auth: React.FC<AuthProps> = ({ onClose, onSuccess, t }) => {
       });
       if (error) throw error;
     } catch (err: any) {
+      console.error('OAuth Error:', err);
       setError(err.message);
     }
   };

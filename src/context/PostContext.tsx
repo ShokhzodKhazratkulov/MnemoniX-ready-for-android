@@ -51,6 +51,19 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchPosts = useCallback(async (silent: boolean = false, reset: boolean = false, viewMode: string = 'all', language: Language = Language.UZBEK, bypassCache: boolean = false) => {
     const { data: { session } } = await supabase.auth.getSession();
     const user = session?.user;
+    
+    // If we want 'mine' or 'remixes' but no user, we can't fetch yet, 
+    // unless we want to show an empty state or try again soon.
+    if ((viewMode === 'mine' || viewMode === 'remixes') && !user) {
+      console.log(`PostContext: Fetching ${viewMode} without user. Setting empty state.`);
+      if (reset) {
+        setPosts([]);
+        setHasMore(false);
+        setIsLoading(false);
+      }
+      return;
+    }
+
     const cacheKey = `${viewMode}-${language}-${user?.id || 'guest'}`;
 
     // HYDRATION: If we have cached data, show it immediately (Stale-While-Revalidate)
@@ -85,7 +98,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const from = currentPage * POSTS_PER_PAGE;
       const to = from + POSTS_PER_PAGE - 1;
 
-      // OPTIMIZATION: We fetch counts from the engagement JSONB field 
+      // Fetch counts from the engagement JSONB field 
       // and only fetch the current user's reactions for these posts.
       let query = supabase
         .from('posts')
@@ -109,7 +122,15 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
             profiles:user_id (username, full_name, avatar_url)
           )
         `)
-        .eq('language', language)
+        .eq('language', language);
+
+      if (viewMode === 'mine' && user) {
+        query = query.eq('user_id', user.id).is('parent_post_id', null);
+      } else if (viewMode === 'remixes' && user) {
+        query = query.eq('user_id', user.id).not('parent_post_id', 'is', null);
+      }
+
+      query = query
         .order('created_at', { ascending: false })
         .range(from, to);
 
@@ -289,7 +310,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
           avatar_url: (newPostData.profiles as any)?.avatar_url,
           word: newPostData.word || '',
           keyword: newPostData.keyword || '',
-          story: newPostData.word || '', // Fallback to word if story is missing
+          story: newPostData.story || '',
           image_url: newPostData.image_url,
           language: newPostData.language as Language,
           parent_post_id: newPostData.parent_post_id,

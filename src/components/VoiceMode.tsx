@@ -166,13 +166,46 @@ export const VoiceMode = React.memo(({ onClose, uiLanguage, contentLanguage }: P
 
   useEffect(() => {
     mountedRef.current = true;
-    const apiKey = process.env.VITE_GEMINI_API_KEYS?.split(',')[0] || process.env.API_KEY || import.meta.env.VITE_GEMINI_API_KEYS?.split(',')[0];
+    
+    // Multi-source API Key detection for resilient bundling
+    const apiKey = 
+      import.meta.env.VITE_GEMINI_API_KEYS?.split(',')[0] || 
+      import.meta.env.GEMINI_API_KEY ||
+      (typeof process !== 'undefined' ? (process.env.VITE_GEMINI_API_KEYS?.split(',')[0] || process.env.GEMINI_API_KEY) : null) ||
+      (typeof window !== 'undefined' ? ((window as any).VITE_GEMINI_API_KEYS?.split(',')[0] || (window as any).GEMINI_API_KEY) : null);
+
+    if (!apiKey) {
+      console.error("Gemini API Key missing in VoiceMode after exhaustive check.");
+      setStatus(t.error);
+      return;
+    }
     const ai = new GoogleGenAI({ apiKey });
     let sessionPromise: Promise<any>;
 
     const startSession = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        console.log("VoiceMode: Requesting microphone permission...");
+        
+        // Attempt Capacitor permission request if on native
+        if (typeof window !== 'undefined' && (window as any).Capacitor) {
+          try {
+            console.log("VoiceMode: Capacitor detected, logging system info...");
+          } catch (e) {
+            console.warn("Permission check failed, proceeding with web API");
+          }
+        }
+
+        let stream: MediaStream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (micErr: any) {
+          console.error("Microphone access denied or error:", micErr);
+          if (mountedRef.current) setStatus(t.micError);
+          // Suggest clearing cache or checking system settings
+          alert(t.micError + "\n\nTip: Check if MnemoniX has microphone permissions in Android Settings.");
+          return;
+        }
+
         if (!mountedRef.current) {
           stream.getTracks().forEach(t => t.stop());
           return;

@@ -106,6 +106,8 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedMnemonicForReview, setSelectedMnemonicForReview] = useState<SavedMnemonic | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfileType | null>(null);
+  const [userPostCount, setUserPostCount] = useState(0);
+  const [userRemixCount, setUserRemixCount] = useState(0);
   const [isAudioLoading, setIsAudioLoading] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
@@ -343,15 +345,39 @@ export default function App() {
         });
 
         // 3. Handle Deep Links (OAuth/Redirect)
-        urlListener = await CapApp.addListener('appUrlOpen', (event: any) => {
+        urlListener = await CapApp.addListener('appUrlOpen', async (event: any) => {
           const urlString = event.url;
+          console.log('App: Deep link received:', urlString);
+          
+          let accessToken = '';
+          let refreshToken = '';
+
+          // Support both hash (default Supabase) and query params
           if (urlString.includes('#')) {
             const hash = urlString.split('#')[1];
-            if (hash) {
-              supabase.auth.setSession({
-                access_token: new URLSearchParams(hash).get('access_token') || '',
-                refresh_token: new URLSearchParams(hash).get('refresh_token') || ''
-              });
+            const params = new URLSearchParams(hash);
+            accessToken = params.get('access_token') || '';
+            refreshToken = params.get('refresh_token') || '';
+          } else if (urlString.includes('?')) {
+            const query = urlString.split('?')[1];
+            const params = new URLSearchParams(query);
+            accessToken = params.get('access_token') || '';
+            refreshToken = params.get('refresh_token') || '';
+          }
+
+          if (accessToken && refreshToken) {
+            console.log('App: Setting Supabase session from deep link...');
+            const { error: sessionError } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken
+            });
+            
+            if (sessionError) {
+              console.error('App: Error setting session:', sessionError);
+            } else {
+              console.log('App: Session set successfully from deep link');
+              // Optionally force view to HOME or DASHBOARD
+              setView(AppView.HOME);
             }
           }
         });
@@ -436,6 +462,46 @@ export default function App() {
     }
   }, [user, contentLanguage]);
 
+  // Fetch user stats (Total posts and remixes)
+  const fetchUserStats = useCallback(async (userId: string) => {
+    if (!userId || userId === 'guest') {
+      setUserPostCount(0);
+      setUserRemixCount(0);
+      return;
+    }
+
+    try {
+      console.log("App: Fetching stats for user:", userId);
+      // Fetch post count (original posts)
+      const { count: postCount, error: postCountError } = await supabase
+        .from('posts')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .is('parent_post_id', null);
+      
+      if (!postCountError) {
+        setUserPostCount(postCount || 0);
+      } else {
+        console.error("Supabase stats error (posts):", postCountError);
+      }
+
+      // Fetch remix count
+      const { count: remixCount, error: remixCountError } = await supabase
+        .from('posts')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .not('parent_post_id', 'is', null);
+      
+      if (!remixCountError) {
+        setUserRemixCount(remixCount || 0);
+      } else {
+        console.error("Supabase stats error (remixes):", remixCountError);
+      }
+    } catch (err) {
+      console.error("Error fetching user stats:", err);
+    }
+  }, []);
+
   // Fetch user profile
   const fetchProfile = useCallback(async (userId: string) => {
     // Try loading from cache first
@@ -487,17 +553,21 @@ export default function App() {
           fetchProfile(userId);
         }
       }
+
+      // Fetch stats
+      fetchUserStats(userId);
     } catch (err) {
       console.error('Error fetching profile:', err);
     }
-  }, [user, view]);
+  }, [user, view, fetchUserStats]);
 
   useEffect(() => {
     if (isAuthReady && user) {
       fetchUserWords();
       fetchProfile(user.id);
+      fetchUserStats(user.id);
     }
-  }, [user, isAuthReady]);
+  }, [user, isAuthReady, fetchUserWords, fetchProfile, fetchUserStats]);
 
   // Force sign-in for unauthenticated users
   useEffect(() => {
@@ -1494,8 +1564,8 @@ export default function App() {
                 savedMnemonics={savedMnemonics}
                 totalWords={savedMnemonics.length} 
                 masteredCount={masteredCount}
-                userPostCount={posts.filter(p => p.user_id === user?.id && !p.parent_post_id).length}
-                userRemixCount={posts.filter(p => p.user_id === user?.id && !!p.parent_post_id).length}
+                userPostCount={userPostCount}
+                userRemixCount={userRemixCount}
                 onSignOut={async () => { 
                   await supabase.auth.signOut();
                   setIsGuest(true); 

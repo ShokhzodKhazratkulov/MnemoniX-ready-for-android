@@ -10,7 +10,23 @@ export class GeminiService {
   private initKeys() {
     if (this.apiKeys.length > 0) return;
     
-    const rawKeys = import.meta.env.VITE_GEMINI_API_KEYS || (typeof process !== 'undefined' ? process.env.VITE_GEMINI_API_KEYS : null);
+    // Check multiple potential environment variable names and sources
+    let rawKeys = 
+      import.meta.env.VITE_GEMINI_API_KEYS || 
+      import.meta.env.GEMINI_API_KEY ||
+      (typeof process !== 'undefined' ? (process.env.VITE_GEMINI_API_KEYS || process.env.GEMINI_API_KEY) : null);
+
+    // Capacitor/Bundled fallback: check if injected via window or process.env directly
+    if (!rawKeys && typeof window !== 'undefined') {
+      rawKeys = (window as any).VITE_GEMINI_API_KEYS || (window as any).GEMINI_API_KEY;
+    }
+
+    if (!rawKeys) {
+      console.warn("Gemini API Keys not found. Checking for single GEMINI_API_KEY...");
+      // Try one last fallback
+      rawKeys = import.meta.env.VITE_GEMINI_KEY || (typeof process !== 'undefined' ? process.env.VITE_GEMINI_KEY : null);
+    }
+
     if (!rawKeys) {
       throw new Error("Gemini API Keys not found. Please ensure VITE_GEMINI_API_KEYS is set in your environment.");
     }
