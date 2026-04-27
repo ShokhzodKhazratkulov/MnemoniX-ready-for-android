@@ -104,7 +104,12 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('posts')
         .select(`
           *,
-          profiles:user_id (username, full_name, avatar_url)
+          profiles:user_id (username, full_name, avatar_url),
+          parent:parent_post_id (
+            id,
+            user_id,
+            profiles:user_id (username, full_name, avatar_url)
+          )
         `)
         .eq('language', language);
 
@@ -264,13 +269,18 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
         })
         .select(`
           *,
-          profiles:user_id (username, full_name, avatar_url)
+          profiles:user_id (username, full_name, avatar_url),
+          parent:parent_post_id (
+            id,
+            profiles:user_id (username, full_name)
+          )
         `)
         .single();
 
       if (pError) {
-        console.error('Supabase Insert Error:', pError);
-        alert(`Postni saqlab bo'lmadi: ${pError.message}`);
+        console.error('PostContext: Insert Error:', pError);
+        const errorMsg = pError.message || 'Unknown error';
+        alert(`Postni saqlab bo'lmadi: ${errorMsg}\nCode: ${pError.code}`);
         throw pError;
       }
 

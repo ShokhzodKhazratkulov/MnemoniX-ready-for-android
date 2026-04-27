@@ -4,6 +4,7 @@ import { motion } from 'motion/react';
 import { Mail, Lock, Loader2, Github, Chrome, ArrowLeft } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 
 interface AuthProps {
   onClose?: () => void;
@@ -74,21 +75,36 @@ export const Auth: React.FC<AuthProps> = ({ onClose, onSuccess, t }) => {
 
   const handleOAuth = async (provider: 'google' | 'github') => {
     try {
-    const isNative = Capacitor.isNativePlatform() || window.location.protocol === 'file:';
-    const redirectTo = isNative 
-      ? 'com.mnemonix.app://callback' 
-      : window.location.origin;
-    
-    console.log(`Auth: Redirect URL resolved to: ${redirectTo}. Protocol: ${window.location.protocol}`);
+      const isNative = Capacitor.isNativePlatform();
+      
+      // If we are on mobile web but not "native", we still might be redirected to the wrong place
+      // if the preview URL isn't in Supabase.
+      const redirectTo = isNative 
+        ? 'com.mnemonix.app://callback' 
+        : window.location.origin;
+      
+      console.log(`Auth: Initiating ${provider} OAuth. Native: ${isNative}, Redirect: ${redirectTo}`);
 
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo
+      // Save the provider for later if needed
+      localStorage.setItem('oauth_provider', provider);
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo,
+          skipBrowserRedirect: isNative
+        }
+      });
+
+      if (error) throw error;
+
+      if (isNative && data?.url) {
+        console.log('Auth: Redirecting to OAuth via Browser plugin:', data.url);
+        await Browser.open({ url: data.url, windowName: '_self' });
+      } else if (!isNative && !data?.url) {
+          // Standard web redirect is handled by supabase.auth.signInWithOAuth automatically
+          // unless data.url is returned (which happens if skipBrowserRedirect: true)
       }
-    });
-
-    if (error) throw error;
     } catch (err: any) {
       console.error('OAuth Error:', err);
       setError(err.message);

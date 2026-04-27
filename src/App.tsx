@@ -30,6 +30,8 @@ import {
 } from 'lucide-react';
 import { App as CapApp } from '@capacitor/app';
 import { Keyboard } from '@capacitor/keyboard';
+import { Browser } from '@capacitor/browser';
+import { Capacitor } from '@capacitor/core';
 
 import { Language, AppState, AppView, MnemonicResponse, SavedMnemonic, Post, AppTheme } from './types';
 import { GeminiService } from './services/geminiService';
@@ -367,6 +369,14 @@ export default function App() {
 
           if (accessToken && refreshToken) {
             console.log('App: Setting Supabase session from deep link...');
+            
+            // Close the browser if it was opened via the Browser plugin
+            try {
+              await Browser.close();
+            } catch (e) {
+              console.warn('App: Could not close browser (might not be open):', e);
+            }
+
             const { error: sessionError } = await supabase.auth.setSession({
               access_token: accessToken,
               refresh_token: refreshToken

@@ -279,7 +279,7 @@ CRITICAL RULES:
       const languageName = targetLanguage === Language.ENGLISH ? 'English' : targetLanguage;
 
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash-preview-tts",
+        model: "gemini-3.1-flash-tts-preview",
         contents: [{ 
           parts: [{ 
             text: `Read the following text aloud. It contains English words and their explanation in ${languageName}. 
