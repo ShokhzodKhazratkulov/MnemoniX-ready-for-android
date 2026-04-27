@@ -617,22 +617,27 @@ export default function App() {
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
     localStorage.setItem('theme', newTheme);
-    if (newTheme === 'dark') {
+  };
+
+  useEffect(() => {
+    if (theme === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
-  };
+    
+    // Status Bar styling for Mobile
+    if (Capacitor.isNativePlatform()) {
+      import('@capacitor/status-bar').then(({ StatusBar, Style }) => {
+        StatusBar.setBackgroundColor({ color: theme === 'dark' ? '#1A1A1B' : '#E8F5E9' });
+        StatusBar.setStyle({ style: theme === 'dark' ? Style.Dark : Style.Light });
+      }).catch(e => console.warn('StatusBar error:', e));
+    }
+  }, [theme]);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
     setTheme(savedTheme as 'light' | 'dark');
-    
-    if (savedTheme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
   }, []);
 
   const [loadingMessage, setLoadingMessage] = useState('');

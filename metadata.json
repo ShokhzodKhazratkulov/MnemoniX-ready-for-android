@@ -1,5 +1,5 @@
 {
-  "name": "Remix: MnemoniX: ready for android",
+  "name": "MnemoniX",
   "description": "Xorijiy so\u0027zlarni assotsiatsiyalar va qiziqarli tasavvurlar orqali bir zumda eslab qolishga yordam beruvchi aqlli yordamchi.",
   "requestFramePermissions": [
     "microphone"
